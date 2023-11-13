@@ -1,0 +1,55 @@
+version: '2'
+
+x-shared-envs: &envs
+  DB_HOST: mariadb
+  DB_PORT: 3306
+  DB_DATABASE: todoyii
+  DB_USERNAME: root
+  DB_PASSWORD: testing
+
+services:
+  apache:
+    build:
+      context: ./
+      dockerfile: apache.dockerfile
+      target: dev
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ./
+        target: /todo
+    environment:
+      <<: *envs
+      APP_ENV: dev
+      SESS_HANDLER: redis
+      SESS_PATH: tcp://redis
+      SESS_TTL: 2592000
+      REDIS_HOST: redis
+    ports:
+      - '8000:80'
+    depends_on:
+      - mariadb
+  mariadb:
+    image: mariadb:10.6
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: mariadb
+        target: /var/lib/mysql
+    environment:
+      <<: *envs
+      MYSQL_ROOT_PASSWORD: testing
+    ports:
+      - '3001:3306'
+  redis:
+    image: redis:6
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: redis
+        target: /data
+
+volumes:
+  mariadb:
+  redis:
